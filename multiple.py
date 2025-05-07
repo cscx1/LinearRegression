@@ -1,52 +1,47 @@
-#Importing Libraries
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
 import numpy as np
-from sklearn import datasets, linear_model, metrics
 import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.datasets import fetch_california_housing
 
-#Loading the Dataset
-data_url = "http://lib.stat.cmu.edu/datasets/boston"
-raw_df = pd.read_csv(data_url, sep="\\s+", skiprows=22, header=None)
+# Load the California housing dataset
+california_housing = fetch_california_housing()
 
-#Data Preprocessing
-X = np.hstack([raw_df.values[::2, :], raw_df.values[1::2, :2]])
-y = raw_df.values[1::2, 2]
+X = pd.DataFrame(california_housing.data, columns=california_housing.feature_names)
+y = pd.Series(california_housing.target)
 
-#Splitting the Dataset
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4,  random_state=1)
+# Select Features for Visualization
+X = X[['MedInc', 'AveRooms']]
 
-#Training the Model
-reg = linear_model.LinearRegression()
-reg.fit(X_train, y_train)
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-#Evaluating Performance
+# Create a Linear Regression model
+model = LinearRegression()
+model.fit(X_train, y_train)
 
-# regression coefficients
-print('Coefficients: ', reg.coef_)
+# Predict the target variable
+y_pred = model.predict(X_test)
 
-# variance score: 1 means perfect prediction
-print('Variance score: {}'.format(reg.score(X_test, y_test)))
+#Visualizing Best Fit Line in 3D
+fig = plt.figure(figsize=(10, 7))
+ax = fig.add_subplot(111, projection='3d')
 
-# plot for residual error
+ax.scatter(X_test['MedInc'], X_test['AveRooms'],
+           y_test, color='blue', label='Actual Data')
 
-# setting plot style
-plt.style.use('fivethirtyeight')
+x1_range = np.linspace(X_test['MedInc'].min(), X_test['MedInc'].max(), 100)
+x2_range = np.linspace(X_test['AveRooms'].min(), X_test['AveRooms'].max(), 100)
+x1, x2 = np.meshgrid(x1_range, x2_range)
 
-# plotting residual errors in training data
-plt.scatter(reg.predict(X_train), reg.predict(X_train) - y_train, color="green", s=10, label='Train data')
- 
-# plotting residual errors in test data
-plt.scatter(reg.predict(X_test), reg.predict(X_test) - y_test, color="blue", s=10, label='Test data')
+z = model.predict(np.c_[x1.ravel(), x2.ravel()]).reshape(x1.shape)
 
-# plotting line for zero residual error
-plt.hlines(y=0, xmin=0, xmax=50, linewidth=2)
+ax.plot_surface(x1, x2, z, color='red', alpha=0.5, rstride=100, cstride=100)
 
-# plotting legend
-plt.legend(loc='upper right')
+ax.set_xlabel('Median Income')
+ax.set_ylabel('Average Rooms')
+ax.set_zlabel('House Price')
+ax.set_title('Multiple Linear Regression Best Fit Line (3D)')
 
-# plot title
-plt.title("Residual errors")
-
-# method call for showing the plot
 plt.show()

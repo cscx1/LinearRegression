@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.datasets import fetch_california_housing
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 import os
 
 # Prompt for dataset choice
@@ -12,21 +13,40 @@ choice = input("Use 'student' dataset or california 'housing' dataset? (student/
 if choice == 'student':
     dataset_slug = "neilhoneyman/sample-multiple-linear-regression-data"
     os.system(f'kaggle datasets download -d {dataset_slug} --unzip -p ./kaggle_data')
-    df = pd.read_csv(r"C:\Users\mtilg\.kaggle\sample_regression_data.csv")
-    # Check if the file exists
-    if not os.path.exists(r"C:\Users\mtilg\.kaggle\sample_regression_data.csv"):
+    
+    path = r"C:\Users\mtilg\.kaggle\sample_regression_data.csv"
+    if not os.path.exists(path):
         print("File not found. Please check the path.")
         exit()
-    
-    X = df[['Study_Hours', 'Sleep_Hours']]  
-    y = df['Performance_Score']
 
+    df = pd.read_csv(path)
+    X = df[['Study_Hours', 'Sleep_Hours']]
+    y = df['Performance_Score']
 else:
-    # Load California housing dataset
     california_housing = fetch_california_housing()
     X = pd.DataFrame(california_housing.data, columns=california_housing.feature_names)
     y = pd.Series(california_housing.target)
     X = X[['MedInc', 'AveRooms']]
+
+# Show correlation matrix
+corr_matrix = X.corr()
+
+# Calculate VIF
+X_with_const = pd.concat([pd.Series([1]*len(X), name='Intercept'), X], axis=1)
+vif = pd.DataFrame()
+vif["Feature"] = X_with_const.columns
+vif["VIF"] = [variance_inflation_factor(X_with_const.values, i) for i in range(X_with_const.shape[1])]
+
+# Display correlation and VIF in a separate window
+corr_text = "Correlation Matrix:\n" + str(corr_matrix.round(3)) + "\n\n"
+vif_text = "Variance Inflation Factors:\n" + str(vif.round(3))
+full_text = corr_text + vif_text
+
+fig_info = plt.figure(figsize=(10, 6))
+fig_info.canvas.manager.set_window_title("Multicollinearity Info")
+plt.axis('off')
+plt.text(0.01, 0.95, full_text, fontsize=10, va='top', ha='left', wrap=True)
+plt.show()
 
 # Split into training/testing
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
